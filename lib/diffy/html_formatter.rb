@@ -9,8 +9,16 @@ module Diffy
       if @options[:highlight_words]
         wrap_lines(highlighted_words)
       else
-        wrap_lines(@diff.map{|line| wrap_line(ERB::Util.h(line))})
+        wrap_lines(@diff.map{|line| wrap_line(escape(line))})
       end
+    end
+    
+    def escape(string)
+       if @options[:preserve_html]
+         string
+       else
+         ERB::Util.h(string)
+       end
     end
 
     private
@@ -58,7 +66,7 @@ module Diffy
         chunk1 = chunk1
         chunk2 = chunks[index + 1]
         if not chunk2
-          next ERB::Util.h(chunk1)
+          next escape(chunk1)
         end
 
         dir1 = chunk1.each_char.first
@@ -67,7 +75,7 @@ module Diffy
         when ['-', '+']
           if chunk1.each_char.take(3).join("") =~ /^(---|\+\+\+|\\\\)/ and
               chunk2.each_char.take(3).join("") =~ /^(---|\+\+\+|\\\\)/
-            ERB::Util.h(chunk1)
+            escape(chunk1)
           else
             line_diff = Diffy::Diff.new(
                                         split_characters(chunk1),
@@ -79,7 +87,7 @@ module Diffy
             [hi1, hi2]
           end
         else
-          ERB::Util.h(chunk1)
+          escape(chunk1)
         end
       end.flatten
       lines.map{|line| line.each_line.map(&:chomp).to_a if line }.flatten.compact.
@@ -88,7 +96,7 @@ module Diffy
 
     def split_characters(chunk)
       chunk.gsub(/^./, '').each_line.map do |line|
-        (line.chomp.split('') + ['\n']).map{|chr| ERB::Util.h(chr) }
+        (line.chomp.split('') + ['\n']).map{|chr| escape(chr) }
       end.flatten.join("\n") + "\n"
     end
 
